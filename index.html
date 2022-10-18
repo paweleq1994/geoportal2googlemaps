@@ -66,7 +66,7 @@
 </head>
 <body>
 <div class="container">
-    <div class="container">
+    <div class="container py-5">
         <div class="form-floating mb-3">
             <input type="text" class="form-control" id="input" placeholder="Wyszukaj działkę">
             <label for="input">Wyszukaj działkę</label>
@@ -90,42 +90,59 @@
         axios.get(`https://uldk.gugik.gov.pl/?request=GetParcelByIdOrNr&id=${input.value}&result=teryt%2Cparcel%2Cgeom_wkt&srid=2180`)
             .then(r => {
                 responseGeo.innerHTML = "Polygon geoportal: <br>" + r.data;
-                let coordinates = humanReadableCoordinates(r);
-                centroid(coordinates);
+                humanReadableCoordinates(r).forEach(e => window.open(`https://www.google.pl/maps/place/${e}`));
             })
             .catch(e => {
                 console.log(e)
             })
     })
 
-    const getPolygon = (r) => {
-        let polygon = r.data.split("POLYGON((")[1].split("))")[0].split(" ");
+    const getPolygons = (r) => {
+        let polygonAmounts = r.data.split('\n', 1)[0]
+        let polygons = [];
 
-        if (!polygon[0].includes(",") && !polygon[polygon.length -1].includes(",")) {
-            polygon[0] = polygon[polygon.length -1] + "," + polygon[0];
-            polygon.pop();
+        for (let i = 1; i <= polygonAmounts; i++) {
+            let polygon = r.data.split('\n')[i].split("POLYGON((")[1].split("))")[0].split(" ");
+
+            if (!polygon[0].includes(",") && !polygon[polygon.length -1].includes(",")) {
+                polygon[0] = polygon[polygon.length -1] + "," + polygon[0];
+                polygon.pop();
+            }
+
+            polygons.push(polygon)
         }
 
-       return polygon
+       return polygons
     }
 
     const humanReadableCoordinates = (r) => {
-        let polygon = getPolygon(r);
-        let newPolygon = [];
+        let polygons = getPolygons(r);
+        let newPolygons = []
+        let approxCenters = [];
+        let x = [];
+        let y = [];
 
-        polygon.forEach(e => {
-            newPolygon.push(proj4(proj4('EPSG:2180'), proj4('EPSG:4326'), e.split(',').map(ee => parseFloat(ee)).reverse()))
+        polygons.forEach(polygon => {
+            let tmp = [];
+            polygon.forEach((e,i) => {
+                tmp.push(proj4(proj4('EPSG:2180'), proj4('EPSG:4326'), e.split(',').map(ee => parseFloat(ee)).reverse()))
+            })
+            newPolygons.push(tmp.map(e => e.reverse()))
         })
 
-        newPolygon.map(e => e.reverse())
+        // geoParsed.innerHTML = "Polygon geoportal normalne koordynaty: <br>" + newPolygons;
 
-        geoParsed.innerHTML = "Polygon geoportal normalne koordynaty: <br>" + newPolygon;
+        newPolygons.forEach(e => {
+            e.forEach(ee => {
+                x.push(ee[0])
+                y.push(ee[1])
+            })
 
-        return newPolygon
-    }
+            approxCenters.push([x.reduce((partialSum, a) => partialSum + a, 0)/x.length, y.reduce((partialSum, a) => partialSum + a, 0)/y.length])
+        })
 
-    const centroid = (coordinates) =>{
-        console.log(coordinates)
+
+        return approxCenters
     }
 </script>
 
