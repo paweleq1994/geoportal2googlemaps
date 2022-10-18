@@ -90,40 +90,43 @@
         axios.get(`https://uldk.gugik.gov.pl/?request=GetParcelByIdOrNr&id=${input.value}&result=teryt%2Cparcel%2Cgeom_wkt&srid=2180`)
             .then(r => {
                 responseGeo.innerHTML = "Polygon geoportal: <br>" + r.data;
-
-                let polygon = r.data.split("POLYGON((")[1].split("))")[0].split(" ");
-
-                if (!polygon[0].includes(",") && !polygon[polygon.length -1].includes(",")) {
-                    polygon[0] = polygon[polygon.length -1] + "," + polygon[0];
-                    polygon.pop();
-                }
-
-                console.log(polygon)
-                let newPolygon = []
-
-                polygon.forEach(e => {
-                    newPolygon.push(proj4(proj4('EPSG:2180'), proj4('EPSG:4326'), e.split(',').map(ee => parseFloat(ee)).reverse()))
-                })
-
-
-                newPolygon.map(e => e.reverse())
-
-
-
-                geoParsed.innerHTML = "Polygon geoportal normalne koordynaty: <br>" + newPolygon;
-
-
-                var pol = turf.polygon(newPolygon);
-
-                var centroid = turf.centroid(pol);
-
-                console.log(centroid)
-
+                let coordinates = humanReadableCoordinates(r);
+                centroid(coordinates);
             })
             .catch(e => {
                 console.log(e)
             })
     })
+
+    const getPolygon = (r) => {
+        let polygon = r.data.split("POLYGON((")[1].split("))")[0].split(" ");
+
+        if (!polygon[0].includes(",") && !polygon[polygon.length -1].includes(",")) {
+            polygon[0] = polygon[polygon.length -1] + "," + polygon[0];
+            polygon.pop();
+        }
+
+       return polygon
+    }
+
+    const humanReadableCoordinates = (r) => {
+        let polygon = getPolygon(r);
+        let newPolygon = [];
+
+        polygon.forEach(e => {
+            newPolygon.push(proj4(proj4('EPSG:2180'), proj4('EPSG:4326'), e.split(',').map(ee => parseFloat(ee)).reverse()))
+        })
+
+        newPolygon.map(e => e.reverse())
+
+        geoParsed.innerHTML = "Polygon geoportal normalne koordynaty: <br>" + newPolygon;
+
+        return newPolygon
+    }
+
+    const centroid = (coordinates) =>{
+        console.log(coordinates)
+    }
 </script>
 
 </body>
